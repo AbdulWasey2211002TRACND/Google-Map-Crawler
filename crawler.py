@@ -8,6 +8,7 @@ from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.common.keys import Keys
 import pandas as pd
 import requests_html
+import re
 import csv
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -23,6 +24,18 @@ class GoogleMaps:
         self.wait = WebDriverWait(self.driver, 20)
         self.driver.get("https://www.google.com/maps")
         self.file_path = "Scrapper Keywords.xlsx"
+        self.usa_states =  [
+            "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+            "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+            "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
+            "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+            "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+            "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
+            "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina",
+            "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+            "West Virginia", "Wisconsin", "Wyoming"
+        ]
+        self.template = " Companies in "
 
     def load_keywords(self):
         try:
@@ -54,48 +67,50 @@ class GoogleMaps:
             time.sleep(5)
             keywords = self.load_keywords()
             for keyword in keywords:
-                print(
-                    f"Crawler Logs: Crawling Google Maps for keyword: {keyword}.")
-                try:
-                    self.driver.find_element(
-                        By.XPATH, '//*[@id="searchboxinput"]').clear()
-                except:
-                    pass
+                for state in self.usa_states:
+                    complete_keyword = keyword+self.template+state+ ', Usa'
+                    print(
+                        f"Crawler Logs: Crawling Google Maps for keyword: {complete_keyword}.")
+                    try:
+                        self.driver.find_element(
+                            By.XPATH, '//*[@id="searchboxinput"]').clear()
+                    except:
+                        pass
 
-                try:
-                    self.driver.find_element(
-                        By.XPATH, '//*[@id="searchboxinput"]').send_keys(keyword)
-                    self.driver.find_element(
-                        By.XPATH, '//*[@id="searchbox-searchbutton"]').click()
-                    time.sleep(5)
+                    try:
+                        self.driver.find_element(
+                            By.XPATH, '//*[@id="searchboxinput"]').send_keys(complete_keyword)
+                        self.driver.find_element(
+                            By.XPATH, '//*[@id="searchbox-searchbutton"]').click()
+                        time.sleep(5)
 
-                    results = self.driver.find_elements(
-                        By.XPATH, "//a[@class='hfpxzc']")
-                    break_condition = False
-                    focus_element = self.driver.find_element(
-                        By.ID, 'zero-input')
-                    while not break_condition:
-                        temp = results[-1]
-                        self.actionChains.scroll_to_element(
-                            results[-1]).perform()
-                        self.actionChains.move_to_element(
-                            focus_element).click().perform()
-                        for i in range(3):
-                            self.actionChains.send_keys(
-                                Keys.ARROW_DOWN).perform()
-                            time.sleep(2)
-                        self.wait_for_element_location_to_be_stable(temp)
+                        results = self.driver.find_elements(
+                            By.XPATH, "//a[@class='hfpxzc']")
+                        break_condition = False
+                        focus_element = self.driver.find_element(
+                            By.ID, 'zero-input')
+                        while not break_condition:
+                            temp = results[-1]
+                            self.actionChains.scroll_to_element(
+                                results[-1]).perform()
+                            self.actionChains.move_to_element(
+                                focus_element).click().perform()
+                            for i in range(3):
+                                self.actionChains.send_keys(
+                                    Keys.ARROW_DOWN).perform()
+                                time.sleep(2)
+                            self.wait_for_element_location_to_be_stable(temp)
 
-                        results = self.wait.until(EC.presence_of_all_elements_located(
-                            (By.XPATH, "//a[@class='hfpxzc']")))
-                        if results[-1] == temp:
-                            break_condition = True
-                    self.driver.save_screenshot(f"Screenshots\{keyword}.png")
-                    self.google_map_scrapper(self.driver.page_source, keyword)
+                            results = self.wait.until(EC.presence_of_all_elements_located(
+                                (By.XPATH, "//a[@class='hfpxzc']")))
+                            if results[-1] == temp:
+                                break_condition = True
+                        self.driver.save_screenshot(f"Screenshots\{complete_keyword}.png")
+                        self.google_map_scrapper(self.driver.page_source, complete_keyword)
 
-                except Exception as e:
-                    print(f"Crawler Error: ", str(e))
-                    pass
+                    except Exception as e:
+                        print(f"Crawler Error: ", str(e))
+                        pass
 
         finally:
             print("Crawler Logs: Srapping finished. Crawler is Stopping.")
@@ -106,7 +121,7 @@ class GoogleMaps:
         soup = BeautifulSoup(html, "lxml")
         results = soup.find_all('a', 'hfpxzc')
         result = []
-        for i in results:
+        for i in results: 
             try:
                 inner_link = i.get('href')
                 name,phone,location = self.google_map_inner_link_scrap(inner_link)
@@ -132,19 +147,28 @@ class GoogleMaps:
         name = inner_link_html.find('h1', 'DUwDvf lfPIob').text
         print(f"Crawler Logs: Company: {name} scrapped successfully.")
 
-        try:
-            location = inner_link_html.find(
-                'div', 'Io6YTe fontBodyMedium kR99db').text
-        except:
-            location = "Not Available"
+        location = inner_link_html.find(
+            'div', 'Io6YTe fontBodyMedium kR99db').text
+        location = self.extract_zip_code(location)
+    
         try:
             phone = inner_link_html.find_all(
-                'div', 'Io6YTe fontBodyMedium kR99db')[1].text
-            phone = phone.replace(" ", "")
-            if not phone.isnumeric():
+                'div', 'Io6YTe fontBodyMedium kR99db')[2].text
+            
+            check_percentage = self.calculate_percentage_of_numbers(phone)
+            if check_percentage<20:
+                phone = inner_link_html.find_all(
+            'div', 'Io6YTe fontBodyMedium kR99db')[3].text
+                
+            check_percentage = self.calculate_percentage_of_numbers(phone)
+            if check_percentage<20:
+                phone = inner_link_html.find_all(
+            'div', 'Io6YTe fontBodyMedium kR99db')[4].text
+                
+            check_percentage = self.calculate_percentage_of_numbers(phone)
+            if check_percentage<20:
                 phone = "Not Available"
-            else:
-                phone = phone
+                
         except:
             phone = "Not Available"
 
@@ -161,6 +185,26 @@ class GoogleMaps:
                 start_time = time.time()
             time.sleep(1)
 
+    def calculate_percentage_of_numbers(self,phone):
+        total_characters = len(phone)
+        digit_count = sum(1 for char in phone if char.isdigit())
+        percentage = (digit_count / total_characters) * 100
+        return percentage
 
-crawler = GoogleMaps()
-crawler.google_map_crawler()
+    def extract_zip_code(self,address):
+        zip_code_pattern = r'\b\d{5}(?:-\d{4})?\b'
+        matches = re.findall(zip_code_pattern, address)
+        if matches:
+            try:
+                zip_code = matches[0]
+                return zip_code
+            except:
+                return address
+        else:
+            return address
+
+try:
+    crawler = GoogleMaps()
+    crawler.google_map_crawler()
+except:
+    print("Crawler Error: Somwthing went wrong")
