@@ -16,8 +16,8 @@ class Facebook:
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
         options.add_argument("--window-size=1920,1080")
         options.add_argument('--disable-notifications')
-        self.email = "waseysiddique11@gmail.com"
-        self.password = "wf1234"
+        self.email = "" #enter facebook email
+        self.password = "" #enter facebook password
         self.facebook_pages_url = "https://www.facebook.com/search/pages?q="
         options.add_argument("--headless=new")
         self.driver = webdriver.Chrome(options=options)
