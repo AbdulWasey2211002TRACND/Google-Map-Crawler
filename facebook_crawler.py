@@ -6,6 +6,7 @@ import os
 import csv
 from apify_client import ApifyClient
 import time
+import pandas as pd
 
 
 class Facebook:
@@ -33,7 +34,7 @@ class Facebook:
             "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
             "West Virginia", "Wisconsin", "Wyoming"
         ]
-        self.template = "Construction Companies in Arizona, Usa"
+        self.template = " Companies in: "
 
     def load_keywords(self):
         try:
@@ -71,6 +72,7 @@ class Facebook:
 
     def facebook_crawler(self):
         try:
+            keywords = self.load_keywords()
             time.sleep(2)
             self.driver.find_element(By.XPATH, '//*[@id="email"]').send_keys(self.email)
             time.sleep(1)
@@ -78,18 +80,21 @@ class Facebook:
             time.sleep(1)
             self.driver.find_element(By.XPATH, '/html/body/div[1]/div[1]/div[1]/div/div/div/div[2]/div/div[1]/form/div[2]/button').click()
             time.sleep(15)
-            self.driver.get(self.facebook_pages_url+self.template)
-            time.sleep(5)
+            for keyword in keywords:
+                for state in self.usa_states:
+                    complete_keyword = keyword+self.template+state+ ', Usa'
+                    self.driver.get(self.facebook_pages_url+complete_keyword)
+                    time.sleep(5)
 
-            try: 
-                for i in range(15):
-                    self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                    time.sleep(1)
+                    try: 
+                        for i in range(20):
+                            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                            time.sleep(1)
 
-            except:
-                pass
+                    except:
+                        pass
 
-            self.facebook_scrapper(self.driver.page_source,self.template)
+                    self.facebook_scrapper(self.driver.page_source,keyword)
 
         except Exception as e:
             print(f"Crawler Error: ", str(e))
