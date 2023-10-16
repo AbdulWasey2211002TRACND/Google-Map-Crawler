@@ -19,7 +19,7 @@ class Facebook:
         self.email = "waseysiddique11@gmail.com"
         self.password = "wf1234"
         self.facebook_pages_url = "https://www.facebook.com/search/pages?q="
-     #   options.add_argument("--headless=new")
+        #options.add_argument("--headless=new")
         self.driver = webdriver.Chrome(options=options)
         self.driver.get("https://www.facebook.com/")
         self.file_path = "Scrapper Keywords.xlsx"
@@ -135,9 +135,12 @@ class Facebook:
         scrapped_results = []
 
         Name = soup.find('div','x1e56ztr x1xmf6yo').text
-       
+
+        print(f"Crawler Logs: Company:{Name} Scrapped Successfully.")
+
         try:
-            Phone =  soup.find_all('div','x9f619 x1n2onr6 x1ja2u2z x78zum5 x2lah0s x1nhvcw1 x1qjc9v5 xozqiw3 x1q0g3np xyamay9 xykv574 xbmpl8g x4cne27 xifccgj')[0].text
+            phone_list = [phone.text for phone in soup.find_all('div', 'x9f619 x1n2onr6 x1ja2u2z x78zum5 x2lah0s x1nhvcw1 x1qjc9v5 xozqiw3 x1q0g3np xyamay9 xykv574 xbmpl8g x4cne27 xifccgj')]
+            Phone = self.check_number(phone_list)
         except:
             Phone = 'Not Available'
         
@@ -153,8 +156,17 @@ class Facebook:
             
         return scrapped_results
 
-        
+    def check_number(self,phone_numbers):
+        highest_percentage = 0
+        phone_with_highest_percentage = None
 
+        for phone in phone_numbers:
+            percentage = sum(c.isdigit() for c in phone) / len(phone) * 100
+            if percentage > highest_percentage:
+                highest_percentage = percentage
+                phone_with_highest_percentage = phone
+
+        return phone_with_highest_percentage
 
 c = Facebook()
 c.facebook_crawler()
