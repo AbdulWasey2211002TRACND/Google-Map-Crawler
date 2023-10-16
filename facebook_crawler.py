@@ -16,10 +16,10 @@ class Facebook:
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
         options.add_argument("--window-size=1920,1080")
         options.add_argument('--disable-notifications')
-        self.email = "" #enter facebook email
-        self.password = "" #enter facebook password
+        self.email = "waseysiddique11@gmail.com"
+        self.password = "wf1234"
         self.facebook_pages_url = "https://www.facebook.com/search/pages?q="
-        options.add_argument("--headless=new")
+     #   options.add_argument("--headless=new")
         self.driver = webdriver.Chrome(options=options)
         self.driver.get("https://www.facebook.com/")
         self.file_path = "Scrapper Keywords.xlsx"
@@ -94,7 +94,16 @@ class Facebook:
                     except:
                         pass
 
-                    self.facebook_scrapper(self.driver.page_source,keyword)
+                    urls = self.facebook_scrapper(self.driver.page_source,keyword)
+                    results = []
+                    for url in urls:
+                        self.driver.get(url)
+                        time.sleep(3)
+                        results.append(self.facebook_inner_link_scrap(self.driver.page_source,url))
+                    self.save_csv_file(results,"Results")
+
+
+
 
         except Exception as e:
             print(f"Crawler Error: ", str(e))
@@ -112,50 +121,35 @@ class Facebook:
         for i in results: 
             try:
                 inner_link = i.get('href')
-                data={"url":inner_link}
-                all_urls.append(data)
+                all_urls.append(inner_link)
             except Exception as e:
                 print(f"Crawler Error: Something went wrong. Error: ", str(e))
                 pass
         
-        all_results = self.facebook_inner_link_scrap(all_urls)
-        print(f"Crawler Logs: Keyword: {keyword} scrapped successfully.")
-
-        self.save_csv_file(all_results,keyword)
+  
         return all_urls
 
-    def facebook_inner_link_scrap(self, urls):
-
-        client = ApifyClient("apify_api_6hub4jnpbShqAVwVbDEzLDVMfXP7DF2NEU5p")
+    def facebook_inner_link_scrap(self, html,url):
+        soup = BeautifulSoup(html, "lxml")
 
         scrapped_results = []
 
-        run_input = { "startUrls": urls }
+        Name = soup.find('div','x1e56ztr x1xmf6yo').text
+       
+        try:
+            Phone =  soup.find_all('div','x9f619 x1n2onr6 x1ja2u2z x78zum5 x2lah0s x1nhvcw1 x1qjc9v5 xozqiw3 x1q0g3np xyamay9 xykv574 xbmpl8g x4cne27 xifccgj')[0].text
+        except:
+            Phone = 'Not Available'
+        
+        Company_Url  = url
+       
+        data = {
+            "Name":Name,
+            "Phone": Phone,
+            "Company_Url": Company_Url
+        }
 
-        run = client.actor("apify/facebook-pages-scraper").call(run_input=run_input)
-
-        for item in client.dataset(run["defaultDatasetId"]).iterate_items():
-            try:
-                Name = item['info'][0]
-                Name = Name.split('.')[0]
-            except:
-                Name = item['pageName']
-            try:
-                Phone =  item['phone']
-            except:
-                Phone = 'Not Available'
-            try:
-                Company_Url  = item['pageUrl']
-            except:
-                Company_Url  = "Not Available"
-            data = {
-                "Name":Name,
-                "Phone": Phone,
-               "Company_Url": Company_Url
-            }
-
-            scrapped_results.append(data)
-            
+        scrapped_results.append(data)
             
         return scrapped_results
 
