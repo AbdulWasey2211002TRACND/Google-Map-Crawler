@@ -1,3 +1,4 @@
+import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
@@ -6,6 +7,7 @@ import os
 import csv
 import time
 import concurrent.futures
+from fuzzywuzzy import fuzz
 import pandas as pd
 
 
@@ -22,7 +24,7 @@ class Facebook:
         self.email = "waseysiddique11@gmail.com"
         self.password = "wf1234"
         self.facebook_pages_url = "https://www.facebook.com/search/pages?q="
-       # options.add_argument("--headless=new")
+        options.add_argument("--headless=new")
         self.driver = webdriver.Chrome(options=options)
         self.driver.get("https://www.facebook.com/")
         self.file_path = "Scrapper Keywords.xlsx"
@@ -38,6 +40,8 @@ class Facebook:
             "West Virginia", "Wisconsin", "Wyoming"
         ]
         self.template = " Companies in "
+        self.max_time_interval = 5 #Add your max time interval in seconds here
+        self.min_time_interval = 1 #Add your min time interval in seconds here
 
     def load_keywords(self):
         try:
@@ -48,7 +52,7 @@ class Facebook:
 
     def save_csv_file(self, scrapped_data, keyword):
         try:
-            print(f"Crawler Logs: Saving Scrapped Data for keyword:{keyword}")
+            print(f"Crawler Logs: Saving Scrapped Data..")
             folder_path = "Facebook Results"
             csv_file = os.path.join(folder_path, f"{keyword}.csv")
             fieldnames = ["Name", "Phone","Company_Url"]
@@ -67,6 +71,11 @@ class Facebook:
                 for data in scrapped_data:
                     writer.writerow(data)
 
+             
+            df = pd.read_csv(csv_file)
+            df = df.drop_duplicates()
+            df.to_csv(csv_file, index=False, encoding='utf-8')
+ 
         except Exception as e:
             print(
                 f"Crawler Error: Something went wrong in file creation. Error: ", str(e))
@@ -87,7 +96,6 @@ class Facebook:
                     complete_keyword = keyword+self.template+state+ ', Usa'
                     self.driver.get(self.facebook_pages_url+complete_keyword)
                     time.sleep(3)
-
                     try: 
                         for i in range(15):
                             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -99,6 +107,8 @@ class Facebook:
                     urls = self.facebook_scrapper(self.driver.page_source,complete_keyword)
                     page_source = []
                     for url in urls:
+                        interval_time = random.randint(self.min_time_interval, self.max_time_interval)
+                        time.sleep(interval_time)
                         self.driver.get(url)
                         time.sleep(1)
                         data = {
@@ -118,14 +128,18 @@ class Facebook:
             self.driver.quit()
 
     def facebook_scrapper(self, html,keyword):
-        print(f"Crawler Logs: Scrapping Google Maps for keyword: {keyword}.")
+        print(f"Crawler Logs: Scrapping Facebook for keyword: {keyword}.")
         soup = BeautifulSoup(html, "lxml")
         results = soup.find_all('a', 'x1i10hfl xjbqb8w x6umtig x1b1mbwd xaqea5y xav7gou x9f619 x1ypdohk xt0psk2 xe8uvvx xdj266r x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x16tdsg8 x1hl2dhg xggy1nq x1a2a7pz xt0b8zv xzsf02u x1s688f')
         all_urls = []
+        keyword = keyword.split(' ')[0]
         for i in results: 
             try:
                 inner_link = i.get('href')
-                all_urls.append(inner_link)
+                name = i.text
+                comparison = fuzz.ratio(keyword, name)
+                if comparison >30:
+                    all_urls.append(inner_link)
             except Exception as e:
                 print(f"Crawler Error: Something went wrong. Error: ", str(e))
                 pass
@@ -152,6 +166,11 @@ class Facebook:
                 Phone = self.check_number(phone_list)
                 if not Phone:
                     Phone = 'Not Available'
+                else:
+                    Phone = Phone.replace(',','').replace(')','').replace('(','')
+                    if "None" in Phone or "Rating" in Phone or "Review" in Phone:
+                        Phone = 'Not Available'
+              
             except:
                 Phone = 'Not Available'
             
@@ -176,12 +195,12 @@ class Facebook:
             percentage = sum(c.isdigit() for c in phone) / len(phone) * 100
             if percentage > highest_percentage:
                 highest_percentage = percentage
-                if highest_percentage>50:
+                if highest_percentage>5:
                     phone_with_highest_percentage = phone
                 
 
 
-        return phone_with_highest_percentage 
+        return phone_with_highest_percentage
 
 
 c = Facebook()
