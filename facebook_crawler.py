@@ -24,7 +24,7 @@ class Facebook:
         self.email = "waseysiddique11@gmail.com"
         self.password = "wf1234"
         self.facebook_pages_url = "https://www.facebook.com/search/pages?q="
-        options.add_argument("--headless=new")
+        #options.add_argument("--headless=new")
         self.driver = webdriver.Chrome(options=options)
         self.driver.get("https://www.facebook.com/")
         self.file_path = "Scrapper Keywords.xlsx"
@@ -115,8 +115,7 @@ class Facebook:
                             'url' : url,
                             'page_source' : self.driver.page_source
                         }
-                        page_source.append(data)
-                    
+                        page_source.append(data)                    
                     results = self.facebook_inner_link_scrap(page_source)
                     self.save_csv_file(results,"Results")
         except Exception as e:
@@ -125,6 +124,7 @@ class Facebook:
 
         finally:
             print("Crawler Logs: Srapping finished. Crawler is Stopping.")
+            self.driver.close()
             self.driver.quit()
 
     def facebook_scrapper(self, html,keyword):
@@ -138,7 +138,7 @@ class Facebook:
                 inner_link = i.get('href')
                 name = i.text
                 comparison = fuzz.ratio(keyword, name)
-                if comparison >30:
+                if comparison >10:
                     all_urls.append(inner_link)
             except Exception as e:
                 print(f"Crawler Error: Something went wrong. Error: ", str(e))
