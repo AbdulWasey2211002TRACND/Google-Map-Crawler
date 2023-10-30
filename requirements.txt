@@ -3,3 +3,5 @@ nest_asyncio==1.5.8
 pandas==2.1.1
 requests_html==0.10.0
 selenium==4.13.0
+lxml
+openpyxl

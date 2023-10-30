@@ -18,7 +18,7 @@ class GoogleMaps:
         options = webdriver.ChromeOptions()
         print("Crawler Logs: Starting the crawler....")
         options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        options.add_argument("--headless=new")
+        #options.add_argument("--headless=new")
         self.driver = webdriver.Chrome(options=options)
         self.actionChains = ActionChains(self.driver)
         self.wait = WebDriverWait(self.driver, 20)
@@ -51,7 +51,7 @@ class GoogleMaps:
             csv_file = os.path.join(folder_path, f"{keyword}.csv")
             fieldnames = ["Name", "Phone", "Location","Company_Url"]
 
-            with open(csv_file, mode='w', newline='') as file:
+            with open(csv_file, mode='w', newline='',encoding="utf-8") as file:
                 writer = csv.DictWriter(file, fieldnames=fieldnames)
                 writer.writeheader()
                 for data in scrapped_data:
@@ -109,7 +109,8 @@ class GoogleMaps:
                         self.google_map_scrapper(self.driver.page_source, complete_keyword)
 
                     except Exception as e:
-                        print(f"Crawler Error: ", str(e))
+                        print(f"Crawler Restarting")
+                        self.driver.get("https://www.google.com/maps")
                         pass
 
         finally:
